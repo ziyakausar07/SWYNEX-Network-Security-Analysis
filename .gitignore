@@ -1,0 +1,16 @@
+# Operating System files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Temporary Wireshark capture files
+*.tmp
+*.temp
+
+# IDE & Editor folders
+.vscode/
+.idea/
+*.swp
+*~
