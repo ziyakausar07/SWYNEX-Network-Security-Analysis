@@ -151,6 +151,8 @@ Applying the filter `tcp.flags.syn == 1 && tcp.flags.ack == 0` isolates TCP conn
 
 ## 🔐 7. Cryptographic & TLS Protocol Analysis
 
+### 7.1 TLS Display Filter Inspection (`tls`)
+
 Executing the `tls` display filter displays active cryptographic handshakes and application data frames:
 
 <div align="center">
@@ -158,21 +160,50 @@ Executing the `tls` display filter displays active cryptographic handshakes and 
   <p><em>Figure 9: TLS Display Filter Revealing Client Hello & SNI Extension</em></p>
 </div>
 
-### Key TLS Handshake Highlights:
-1. **Frame 6 — Client Hello:**
-   - Client announces TLS 1.3 capabilities.
-   - **Server Name Indication (SNI):** Extracted hostname confirms **`mobile.events.data.microsoft.com`** (Microsoft Telemetry & Cloud diagnostics).
-2. **Frame 7 — Server Hello & Change Cipher Spec:**
-   - Microsoft server selects preferred high-security cipher suite (`TLS_AES_128_GCM_SHA256`).
-3. **Application Data Frames (Frames 12, 15, 16, 18, 22, 25):**
-   - Cryptographically protected bidirectional transmission.
-4. **Additional SNI Observed (`wireshark_Wi-FiFH69W3.pcapng` Frame 4):**
-   - Client Hello identified **`api1.reasonsecurity.com`** (ReasonLabs / RAV Antivirus endpoint protection telemetry).
+### 7.2 Dedicated TLS Handshake Analysis (`tls.handshake`)
 
-### Payload Inspection via "Follow TCP Stream"
+**Objective:**  
+To inspect TLS handshake packets using Wireshark and understand the initial cryptographic negotiation between a client and a server.
+
+**Display Filter Used:**  
+```wireshark
+tls.handshake
+```
+
+**Observation:**  
+Two packets were displayed after applying the `tls.handshake` filter (Packets 6 and 7, representing 1.6% of the capture). The packets were identified as **Client Hello** and **Server Hello**.
+
 <div align="center">
-  <img src="evidence/11_follow_tcp_stream_encrypted_payload.png" alt="Follow TCP Stream" width="850px" />
-  <p><em>Figure 10: Follow TCP Stream Window (Stream 0) Demonstrating High-Entropy Encrypted Payload</em></p>
+  <img src="evidence/11_tls_handshake_client_hello.png" alt="TLS Handshake Client Hello" width="850px" />
+  <p><em>Figure 10: Packet 6 Detailed Dissection — TLSv1.3 Handshake Protocol: Client Hello (SNI: mobile.events.data.microsoft.com)</em></p>
+</div>
+
+<div align="center">
+  <img src="evidence/12_tls_handshake_server_hello.png" alt="TLS Handshake Server Hello" width="850px" />
+  <p><em>Figure 11: Packet 7 Detailed Dissection — TLSv1.3 Handshake Protocol: Server Hello & Change Cipher Spec</em></p>
+</div>
+
+#### Handshake Analysis:
+- **Client Hello (Packet 6):** The client initiates the TLS handshake and provides information such as supported TLS versions (TLS 1.2 and TLS 1.3), cipher suites, elliptic curve parameters, and the target domain via Server Name Indication (`mobile.events.data.microsoft.com`).
+- **Server Hello (Packet 7):** The server responds with the parameters selected for the TLS connection, negotiating cipher suite `TLS_AES_128_GCM_SHA256` and transitioning into encrypted state with `Change Cipher Spec`.
+
+#### Security Assessment:
+The presence of Client Hello and Server Hello messages is consistent with standard TLS handshake activity. However, these messages alone do not confirm that the connection is fully secure or that no security threats exist.
+
+#### Recommendation:
+- Inspect the negotiated TLS version, selected cipher suite, and certificate details where available.
+- Verify that the connection uses appropriate security settings (mandating TLS 1.3, disabling legacy algorithms like 3DES/RC4, and ensuring valid CA trust chains).
+
+#### Conclusion:
+The capture contains TLS handshake messages. Further inspection confirms modern TLS 1.3 protocol adoption with strong cipher negotiations and zero plaintext disclosure.
+
+---
+
+### 7.3 Payload Inspection via "Follow TCP Stream"
+
+<div align="center">
+  <img src="evidence/13_follow_tcp_stream_encrypted_payload.png" alt="Follow TCP Stream" width="850px" />
+  <p><em>Figure 12: Follow TCP Stream Window (Stream 0) Demonstrating High-Entropy Encrypted Payload</em></p>
 </div>
 
 - **Inspection Outcome:** The stream contains 13 KB of high-entropy binary ciphertext.
@@ -243,7 +274,9 @@ SWYNEX-Network-Security-Analysis/
 │   ├── 08_filter_tcp_syn_flag.png
 │   ├── 09_tcp_syn_packet_details.png
 │   ├── 10_filter_tls_handshake_sni.png
-│   └── 11_follow_tcp_stream_encrypted_payload.png
+│   ├── 11_tls_handshake_client_hello.png
+│   ├── 12_tls_handshake_server_hello.png
+│   └── 13_follow_tcp_stream_encrypted_payload.png
 ├── report/
 │   └── Network_Security_Analysis_Report.md
 └── README.md

@@ -207,7 +207,40 @@ SNI: api1.reasonsecurity.com
 ```
 This domain corresponds to ReasonLabs Cybersecurity (RAV Antivirus telemetry agent installed on the local system communicating with its cloud threat intelligence backend).
 
-### 7.2 TCP Stream Reassembly & Confidentiality Audit
+### 7.2 Dedicated TLS Handshake Analysis (`tls.handshake`)
+
+**Objective:**  
+To inspect TLS handshake packets using Wireshark and understand the initial cryptographic negotiation between a client and a server.
+
+**Display Filter Used:**  
+```wireshark
+tls.handshake
+```
+
+**Observation:**  
+Exactly two packets were displayed after applying the `tls.handshake` filter in capture profile `wireshark_Wi-FiPOLDX3.pcapng` (Packets 6 and 7, representing 1.6% of the capture). The packets were identified as **Client Hello** and **Server Hello**.
+
+| Packet # | Source -> Destination | Length | TLS Record Layer | Protocol Details & SNI |
+|:---:|:---|:---:|:---|:---|
+| **Frame 6** | `192.168.29.161:53790` -> `40.79.141.157:443` | 613 B | Handshake Protocol: **Client Hello** | TLSv1.3, SNI: `mobile.events.data.microsoft.com`, Cipher Suites offered |
+| **Frame 7** | `40.79.141.157:443` -> `192.168.29.161:53790` | 1514 B | Handshake Protocol: **Server Hello**<br>Change Cipher Spec Protocol | Selected Cipher: `TLS_AES_128_GCM_SHA256`, TLS segment data (1262 B) |
+
+**Detailed Packet Analysis:**
+- **Client Hello (Packet 6):** The client initiates the TLS handshake and provides critical cryptographic parameters, including supported TLS versions (TLS 1.2 and TLS 1.3), elliptic curve extensions (Key Share, Supported Groups), and server identification via Server Name Indication (`mobile.events.data.microsoft.com`).
+- **Server Hello (Packet 7):** The server acknowledges the handshake parameters, selects the preferred secure cipher suite, and immediately transitions the session into encrypted mode using the `Change Cipher Spec` record layer.
+
+**Security Assessment:**  
+The presence of Client Hello and Server Hello messages is consistent with standard, authorized TLS handshake activity. However, these messages alone do not confirm that the connection is fully secure or that no security threats exist.
+
+**Defensive Recommendations for Handshakes:**  
+- Inspect the negotiated TLS version, selected cipher suite, and certificate details where available.
+- Verify that the connection uses appropriate security settings (e.g., prohibiting SSLv3, TLS 1.0, and TLS 1.1, and requiring forward-secrecy ciphers like ECDHE/DHE).
+- Ensure certificate chains validate against trusted root certificate authorities (CAs).
+
+**Conclusion:**  
+The capture contains valid TLS handshake messages. Further inspection confirms modern TLS 1.3 protocol adoption with strong cipher negotiations and zero plaintext disclosure.
+
+### 7.3 TCP Stream Reassembly & Confidentiality Audit
 Using Wireshark **Follow TCP Stream (tcp.stream eq 0)** on the communication to `40.79.141.157:443`:
 - **Stream Metrics:** 5 client packets, 8 server packets, 3 turns, approximately 13 KB total payload.
 - **Payload Characteristics:** High-entropy, non-ASCII binary strings (`.J.H.+...MK....I..a.,HC/....#8..2f.....!.0....N.....`).
@@ -302,7 +335,9 @@ All analytical observations in this report are substantiated by photographic evi
 | **Figure 8** | `08_filter_tcp_syn_flag.png` | Application of filter `tcp.flags.syn == 1 && tcp.flags.ack == 0` isolating initial connection SYN. |
 | **Figure 9** | `09_tcp_syn_packet_details.png` | Deep packet tree dissection of Packet 3 (TCP Sequence Number, Window Scale, MSS). |
 | **Figure 10** | `10_filter_tls_handshake_sni.png` | Application of filter `tls` demonstrating TLS 1.3 Client Hello with Microsoft SNI. |
-| **Figure 11** | `11_follow_tcp_stream_encrypted_payload.png` | Follow TCP Stream reassembly confirming 13 KB encrypted application data payload. |
+| **Figure 11** | `11_tls_handshake_client_hello.png` | Dedicated `tls.handshake` filter showing Packet 6 inspection (Client Hello with Microsoft SNI). |
+| **Figure 12** | `12_tls_handshake_server_hello.png` | Dedicated `tls.handshake` filter showing Packet 7 inspection (Server Hello & Change Cipher Spec). |
+| **Figure 13** | `13_follow_tcp_stream_encrypted_payload.png` | Follow TCP Stream reassembly confirming 13 KB encrypted application data payload. |
 
 ---
 
