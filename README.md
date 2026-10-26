@@ -246,8 +246,6 @@ SWYNEX-Network-Security-Analysis/
 │   └── 11_follow_tcp_stream_encrypted_payload.png
 ├── report/
 │   └── Network_Security_Analysis_Report.md
-├── LINKEDIN_POST.md
-├── VIDEO_DEMO_SCRIPT.md
 ├── .gitignore
 └── README.md
 ```
